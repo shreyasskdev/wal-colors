@@ -33,6 +33,52 @@ pub fn rgb_to_hsv(color: u32) Hsv {
     return .{ .h = h, .s = s, .v = v };
 }
 
+fn hsv_to_rgb(hsv: Hsv) u32 {
+    const h = hsv.h;
+    const s = hsv.s;
+    const v = hsv.v;
+
+    const c = v * s;
+    const x = c * (1.0 - @abs(@mod(h / 60.0, 2.0) - 1.0));
+    const m = v - c;
+
+    var r: f32 = 0;
+    var g: f32 = 0;
+    var b: f32 = 0;
+
+    if (h >= 0 and h < 60) {
+        r = c;
+        g = x;
+        b = 0;
+    } else if (h >= 60 and h < 120) {
+        r = x;
+        g = c;
+        b = 0;
+    } else if (h >= 120 and h < 180) {
+        r = 0;
+        g = c;
+        b = x;
+    } else if (h >= 180 and h < 240) {
+        r = 0;
+        g = x;
+        b = c;
+    } else if (h >= 240 and h < 300) {
+        r = x;
+        g = 0;
+        b = c;
+    } else if (h >= 300 and h < 360) {
+        r = c;
+        g = 0;
+        b = x;
+    }
+
+    const final_r = @as(u8, @intFromFloat((r + m) * 255.0));
+    const final_g = @as(u8, @intFromFloat((g + m) * 255.0));
+    const final_b = @as(u8, @intFromFloat((b + m) * 255.0));
+
+    return rgb2hex(final_r, final_g, final_b);
+}
+
 pub fn findOptimalForegroundColor(background: u32, palette: []const zigimg.color.Rgba32) u32 {
     var best_color: u32 = 0;
     var best_score: f32 = -1.0;
@@ -166,7 +212,7 @@ fn calculateContrastRatio(color1: u32, color2: u32) f32 {
     return (lighter + 0.05) / (darker + 0.05);
 }
 
-fn calculateRelativeLuminance(color: u32) f32 {
+pub fn calculateRelativeLuminance(color: u32) f32 {
     const r = @as(f32, @floatFromInt((color >> 16) & 0xFF)) / 255.0;
     const g = @as(f32, @floatFromInt((color >> 8) & 0xFF)) / 255.0;
     const b = @as(f32, @floatFromInt(color & 0xFF)) / 255.0;
@@ -176,6 +222,14 @@ fn calculateRelativeLuminance(color: u32) f32 {
     const g_lin = if (g <= 0.03928) g / 12.92 else std.math.pow(f32, (g + 0.055) / 1.055, 2.4);
     const b_lin = if (b <= 0.03928) b / 12.92 else std.math.pow(f32, (b + 0.055) / 1.055, 2.4);
     return 0.2126 * r_lin + 0.7152 * g_lin + 0.0722 * b_lin;
+}
+pub fn desaturateIfTooVibrant(color: u32, max_saturation: f32) u32 {
+    const hsv = rgb_to_hsv(color);
+    if (hsv.s <= max_saturation) {
+        return color;
+    }
+    const new_s = max_saturation;
+    return hsv_to_rgb(.{ .h = hsv.h, .s = new_s, .v = hsv.v });
 }
 
 pub fn rgb2hex(r: u8, g: u8, b: u8) u32 {

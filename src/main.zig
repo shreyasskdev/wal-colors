@@ -74,13 +74,20 @@ pub fn main() !void {
 
     // Debug
     const background_color = dominant_color;
-    const foreground_color = helper.findOptimalForegroundColor(background_color, palette);
-    const adjusted_foreground = helper.adjustColorForContrastGentle(foreground_color, background_color, 4.5);
-    const theme_mode = helper.determineTheme(background_color, adjusted_foreground);
+    const bg_luminance = helper.calculateRelativeLuminance(background_color);
+    var adjusted_background = background_color;
+    if (bg_luminance > 0.1) {
+        adjusted_background = helper.desaturateIfTooVibrant(background_color, 0.3);
+    }
+    const foreground_color = helper.findOptimalForegroundColor(adjusted_background, palette);
+    const adjusted_foreground = helper.adjustColorForContrastGentle(foreground_color, adjusted_background, 4.5);
+    const theme_mode = helper.determineTheme(adjusted_background, adjusted_foreground);
 
     try stdout.print("--- Selected Theme Colors ---\n", .{});
     try helper.printColorSwatch(stdout, background_color, "Background");
     try stdout.print("{s}\n", .{helper.u32_2_hexstr(background_color)});
+    try helper.printColorSwatch(stdout, adjusted_background, "Adjusted Background");
+    try stdout.print("{s}\n", .{helper.u32_2_hexstr(adjusted_background)});
     try helper.printColorSwatch(stdout, foreground_color, "Foreground");
     try stdout.print("{s}\n", .{helper.u32_2_hexstr(foreground_color)});
     try helper.printColorSwatch(stdout, adjusted_foreground, "Adjusted Foreground");
