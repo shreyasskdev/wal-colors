@@ -259,3 +259,61 @@ pub fn printColorSwatch(writer: anytype, color: u32, label: []const u8) !void {
     try writer.print("\x1b[0m", .{});
     try writer.print(" {s}\n", .{label});
 }
+
+pub fn createTintedStatusColors(palette: []const zigimg.color.Rgba32) struct {
+    success: u32,
+    err: u32,
+    warning: u32,
+} {
+    const base_success = rgb2hex(34, 197, 94); // Green-500
+    const base_error = rgb2hex(239, 68, 68); // Red-500
+    const base_warning = rgb2hex(245, 158, 11); // Yellow-500
+
+    // Find the most saturated color in palette to use as tint source
+    var tint_color: u32 = 0;
+    var max_saturation: f32 = 0;
+
+    for (palette) |color| {
+        const palette_color = rgb2hex(color.r, color.g, color.b);
+        const hsv = rgb_to_hsv(palette_color);
+        if (hsv.s > max_saturation) {
+            max_saturation = hsv.s;
+            tint_color = palette_color;
+        }
+    }
+
+    // If no saturated color found, use a mid-tone from palette
+    if (tint_color == 0) {
+        for (palette) |color| {
+            const palette_color = rgb2hex(color.r, color.g, color.b);
+            const luminance = calculateRelativeLuminance(palette_color);
+            if (luminance > 0.2 and luminance < 0.8) {
+                tint_color = palette_color;
+                break;
+            }
+        }
+    }
+
+    return .{
+        .success = blendWithPalette(base_success, tint_color, 0.4),
+        .err = blendWithPalette(base_error, tint_color, 0.4),
+        .warning = blendWithPalette(base_warning, tint_color, 0.4),
+    };
+}
+
+fn blendWithPalette(base_color: u32, tint_color: u32, blend_factor: f32) u32 {
+    const base_r = @as(f32, @floatFromInt((base_color >> 16) & 0xFF));
+    const base_g = @as(f32, @floatFromInt((base_color >> 8) & 0xFF));
+    const base_b = @as(f32, @floatFromInt(base_color & 0xFF));
+
+    const tint_r = @as(f32, @floatFromInt((tint_color >> 16) & 0xFF));
+    const tint_g = @as(f32, @floatFromInt((tint_color >> 8) & 0xFF));
+    const tint_b = @as(f32, @floatFromInt(tint_color & 0xFF));
+
+    // Blend colors
+    const final_r = base_r * (1.0 - blend_factor) + tint_r * blend_factor;
+    const final_g = base_g * (1.0 - blend_factor) + tint_g * blend_factor;
+    const final_b = base_b * (1.0 - blend_factor) + tint_b * blend_factor;
+
+    return rgb2hex(@as(u8, @intFromFloat(@min(final_r, 255))), @as(u8, @intFromFloat(@min(final_g, 255))), @as(u8, @intFromFloat(@min(final_b, 255))));
+}

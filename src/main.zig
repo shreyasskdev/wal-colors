@@ -81,9 +81,10 @@ pub fn main() !void {
     }
     const foreground_color = helper.findOptimalForegroundColor(adjusted_background, palette);
     const adjusted_foreground = helper.adjustColorForContrastGentle(foreground_color, adjusted_background, 4.5);
+    const status_colors = helper.createTintedStatusColors(palette);
     const theme_mode = helper.determineTheme(adjusted_background, adjusted_foreground);
 
-    try stdout.print("--- Selected Theme Colors ---\n", .{});
+    try stdout.print("\n--- Selected Theme Colors ---\n", .{});
     try helper.printColorSwatch(stdout, background_color, "Background");
     try stdout.print("{s}\n", .{helper.u32_2_hexstr(background_color)});
     try helper.printColorSwatch(stdout, adjusted_background, "Adjusted Background");
@@ -92,5 +93,13 @@ pub fn main() !void {
     try stdout.print("{s}\n", .{helper.u32_2_hexstr(foreground_color)});
     try helper.printColorSwatch(stdout, adjusted_foreground, "Adjusted Foreground");
     try stdout.print("{s}\n", .{helper.u32_2_hexstr(adjusted_foreground)});
+
+    try stdout.print("\n--- Status Colors ---\n", .{});
+    try helper.printColorSwatch(stdout, status_colors.success, "Success");
+    try stdout.print("{s}\n", .{helper.u32_2_hexstr(status_colors.success)});
+    try helper.printColorSwatch(stdout, status_colors.err, "Error");
+    try stdout.print("{s}\n", .{helper.u32_2_hexstr(status_colors.err)});
+    try helper.printColorSwatch(stdout, status_colors.warning, "Warning");
+    try stdout.print("{s}\n", .{helper.u32_2_hexstr(status_colors.warning)});
     try stdout.print("Theme mode: {s}\n", .{theme_mode});
 }
